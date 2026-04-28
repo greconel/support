@@ -45,25 +45,52 @@ class TicketObserver
             return;
         }
 
-        // 2) Assignee toegewezen + geen Motion task → task aanmaken
+        // 2) Assignee toegewezen + geen Motion project → project aanmaken via template
         if ($assigneeChanged && $ticket->assigned_to && ! $ticket->motion_task_id) {
+            $ticket->load('agent', 'client');
             $agent = $ticket->agent;
 
             if ($agent?->motion_user_id) {
-                $projectId = $ticket->client?->motion_project_id;
+                $clientName = $ticket->client
+                    ? ($ticket->client->company ?: $ticket->client->full_name)
+                    : 'Onbekend';
 
-                $taskId = $motion->createTask(
-                    "[{$ticket->ticket_number}] {$ticket->subject}",
-                    $ticket->description,
-                    $agent->motion_user_id,
-                    $projectId,
-                    $ticket->impact,
-                    $ticket->labels->pluck('name')->toArray(),
+                $projectName = $motion->buildSupportProjectName(
+                    (string) $ticket->ticket_number,
+                    $clientName,
                 );
 
-                if ($taskId) {
-                    $ticket->updateQuietly(['motion_task_id' => $taskId]);
+                $projectDescription = $motion->buildSupportProjectDescription(
+                    (string) $ticket->ticket_number,
+                    $clientName,
+                    $ticket->subject,
+                    $ticket->impact,
+                    $ticket->labels()->pluck('name')->toArray(),
+                    mb_substr(strip_tags((string) $ticket->description), 0, 600),
+                );
+
+                $startDate = now()->format('Y-m-d');
+                $dueDate   = \Carbon\Carbon::now()->addWeekdays(4)->format('Y-m-d');
+
+                $projectId = $motion->createProjectFromTemplate(
+                    name:                  $projectName,
+                    startDate:             $startDate,
+                    dueDate:               $dueDate,
+                    description:           $projectDescription,
+                    developerMotionUserId: $agent->motion_user_id,
+                );
+
+                if ($projectId) {
+                    $ticket->updateQuietly(['motion_task_id' => $projectId]);
+                    $motion->setDescriptionOnProjectTasks($projectId, $projectDescription);
+                    Log::info("Motion project aangemaakt voor ticket {$ticket->ticket_number}", [
+                        'project_id' => $projectId,
+                    ]);
+                } else {
+                    Log::warning("Motion project aanmaken mislukt voor ticket {$ticket->ticket_number}");
                 }
+            } else {
+                Log::warning("Ticket {$ticket->ticket_number}: agent heeft geen motion_user_id — project niet aangemaakt.");
             }
 
             return;

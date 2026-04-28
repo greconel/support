@@ -14,9 +14,9 @@ class MotionService
 
     public function __construct()
     {
-        $this->apiKey = config('helpdesk.motion.api_key');
+        $this->apiKey      = config('helpdesk.motion.api_key');
         $this->workspaceId = config('helpdesk.motion.workspace_id');
-        $this->baseUrl = config('helpdesk.motion.base_url', 'https://api.usemotion.com/v1');
+        $this->baseUrl     = config('helpdesk.motion.base_url', 'https://api.usemotion.com/v1');
     }
 
     public function isEnabled(): bool
@@ -26,67 +26,185 @@ class MotionService
             && $this->workspaceId;
     }
 
-    public function createTask(
-        string $title,
-        string $description,
-        string $motionUserId,
-        ?string $projectId = null,
+    public function buildSupportProjectName(string $ticketNumber, string $clientName): string
+    {
+        $ticketNumber = ltrim($ticketNumber, '#');
+        $normalizedTicketNumber = ctype_digit($ticketNumber)
+            ? str_pad($ticketNumber, 4, '0', STR_PAD_LEFT)
+            : $ticketNumber;
+
+        return mb_substr("SUPPORT - [#{$normalizedTicketNumber}] {$clientName}", 0, 120);
+    }
+
+    public function buildSupportProjectDescription(
+        string $ticketNumber,
+        string $clientName,
+        string $subject,
         TicketImpact|string|null $impact = null,
         array $labels = [],
+        ?string $description = null
+    ): string {
+        $ticketNumber = ltrim($ticketNumber, '#');
+        $labelTekst   = ! empty($labels) ? implode(', ', $labels) : 'Geen labels';
+
+        $impactTekst = match (true) {
+            $impact instanceof TicketImpact => ucfirst($impact->value),
+            is_string($impact)             => ucfirst($impact),
+            default                        => 'Niet opgegeven',
+        };
+
+        $beschrijving = trim((string) $description);
+        $beschrijving = $beschrijving !== '' ? $beschrijving : 'Geen beschrijving beschikbaar.';
+
+        return implode("\n", [
+            "Ticket: #{$ticketNumber}",
+            "Klant: {$clientName}",
+            "Onderwerp: {$subject}",
+            "Impact: {$impactTekst}",
+            "Labels: {$labelTekst}",
+            '',
+            'Beschrijving:',
+            $beschrijving,
+        ]);
+    }
+
+    public function createProjectFromTemplate(
+        string $name,
+        string $startDate,
+        string $dueDate,
+        ?string $description = null,
+        ?string $developerMotionUserId = null
     ): ?string {
         if (! $this->isEnabled()) {
             return null;
         }
 
         try {
-            $priority = match (true) {
-                $impact instanceof TicketImpact => $impact->motionPriority(),
-                is_string($impact) => match ($impact) {
-                    'high' => 'ASAP',
-                    'medium' => 'HIGH',
-                    'low' => 'MEDIUM',
-                    default => 'MEDIUM',
-                },
-                default => 'MEDIUM',
-            };
+            $definitionId               = config('helpdesk.motion.support_template_id');
+            $stage1Id                   = config('helpdesk.motion.support_stage_1_id');
+            $stage2Id                   = config('helpdesk.motion.support_stage_2_id');
+            $projectManagerMotionUserId = config('helpdesk.motion.support_project_manager_id');
 
-            $labelText = ! empty($labels) ? implode(', ', $labels) : '—';
-            $impactText = $impact instanceof TicketImpact
-                ? ucfirst($impact->value)
-                : ($impact ? ucfirst((string) $impact) : '—');
+            if (! $stage1Id || ! $stage2Id) {
+                Log::warning('Motion stages niet ingesteld voor template-project', [
+                    'support_stage_1_id_present' => (bool) $stage1Id,
+                    'support_stage_2_id_present' => (bool) $stage2Id,
+                ]);
 
-            $snippet = substr(strip_tags($description), 0, 300);
+                return null;
+            }
 
-            $body = "**[SUPPORT]** · Impact: {$impactText} · Labels: {$labelText}\n\n{$snippet}";
+            if (! $developerMotionUserId) {
+                Log::warning('Motion template project kan niet worden aangemaakt zonder developer Motion user id');
+
+                return null;
+            }
+
+            if (! $projectManagerMotionUserId) {
+                Log::warning('Motion template project kan niet worden aangemaakt zonder project manager Motion user id');
+
+                return null;
+            }
+
+            $stage1Due = \Carbon\Carbon::parse($startDate)->addWeekdays(3)->format('Y-m-d');
+            $stage2Due = \Carbon\Carbon::parse($stage1Due)->addWeekdays(1)->format('Y-m-d');
 
             $payload = [
-                'name' => $title,
-                'description' => $body,
-                'workspaceId' => $this->workspaceId,
-                'assigneeId' => $motionUserId,
-                'priority' => $priority,
-                'status' => 'Todo',
+                'name'                => $name,
+                'workspaceId'         => $this->workspaceId,
+                'projectDefinitionId' => $definitionId,
+                'startDate'           => $startDate,
+                'dueDate'             => $dueDate,
+                'description'         => $description,
+                'stages'              => [
+                    [
+                        'stageDefinitionId' => $stage1Id,
+                        'dueDate'           => $stage1Due,
+                        'variableInstances'  => [
+                            ['variableName' => 'Developer',       'value' => $developerMotionUserId],
+                            ['variableName' => 'Project manager', 'value' => $projectManagerMotionUserId],
+                        ],
+                    ],
+                    [
+                        'stageDefinitionId' => $stage2Id,
+                        'dueDate'           => $stage2Due,
+                        'variableInstances'  => [
+                            ['variableName' => 'Developer',       'value' => $developerMotionUserId],
+                            ['variableName' => 'Project manager', 'value' => $projectManagerMotionUserId],
+                        ],
+                    ],
+                ],
             ];
 
-            if ($projectId) {
-                $payload['projectId'] = $projectId;
-            }
-
             $response = Http::withHeaders(['X-API-Key' => $this->apiKey])
-                ->post("{$this->baseUrl}/tasks", $payload);
+                ->post("{$this->baseUrl}/projects", $payload);
 
             if ($response->successful()) {
-                return $response->json('task.id') ?? $response->json('id');
+                Log::info('Motion project aangemaakt', ['body' => $response->body()]);
+
+                return $response->json('project.id') ?? $response->json('id');
             }
 
-            Log::error('Motion createTask mislukt', ['response' => $response->body()]);
+            Log::error('Motion createProjectFromTemplate mislukt', [
+                'response' => $response->body(),
+                'status'   => $response->status(),
+            ]);
 
             return null;
         }
         catch (\Throwable $e) {
-            Log::error('Motion createTask exception', ['message' => $e->getMessage()]);
+            Log::error('Motion createProjectFromTemplate exception', ['message' => $e->getMessage()]);
 
             return null;
+        }
+    }
+
+    public function setDescriptionOnProjectTasks(string $projectId, string $description): void
+    {
+        if (! $this->isEnabled()) {
+            return;
+        }
+
+        try {
+            $response = Http::withHeaders(['X-API-Key' => $this->apiKey])
+                ->get("{$this->baseUrl}/tasks", [
+                    'projectId'   => $projectId,
+                    'workspaceId' => $this->workspaceId,
+                ]);
+
+            if (! $response->successful()) {
+                Log::error('Motion setDescriptionOnProjectTasks: taken ophalen mislukt', [
+                    'project_id' => $projectId,
+                    'response'   => $response->body(),
+                ]);
+
+                return;
+            }
+
+            $tasks = $response->json('tasks', []);
+
+            foreach ($tasks as $task) {
+                $taskId = $task['id'] ?? null;
+
+                if (! $taskId) {
+                    continue;
+                }
+
+                $patch = Http::withHeaders(['X-API-Key' => $this->apiKey])
+                    ->patch("{$this->baseUrl}/tasks/{$taskId}", [
+                        'description' => $description,
+                    ]);
+
+                if (! $patch->successful()) {
+                    Log::warning('Motion setDescriptionOnProjectTasks: taak patchen mislukt', [
+                        'task_id'  => $taskId,
+                        'response' => $patch->body(),
+                    ]);
+                }
+            }
+        }
+        catch (\Throwable $e) {
+            Log::error('Motion setDescriptionOnProjectTasks exception', ['message' => $e->getMessage()]);
         }
     }
 
@@ -153,26 +271,6 @@ class MotionService
         }
     }
 
-    public function getProjects(): array
-    {
-        if (! $this->isEnabled()) {
-            return [];
-        }
-
-        $response = Http::withHeaders(['X-API-Key' => $this->apiKey])
-            ->get("{$this->baseUrl}/projects", [
-                'workspaceId' => $this->workspaceId,
-            ]);
-
-        if (! $response->successful()) {
-            Log::error('Motion getProjects mislukt', ['body' => $response->body()]);
-
-            return [];
-        }
-
-        return $response->json('projects', []);
-    }
-
     public function getTask(string $motionTaskId): ?array
     {
         if (! $this->isEnabled()) {
@@ -190,7 +288,7 @@ class MotionService
             if (! $response->successful()) {
                 Log::error('Motion getTask mislukt', [
                     'task_id' => $motionTaskId,
-                    'status' => $response->status(),
+                    'status'  => $response->status(),
                 ]);
 
                 return null;
