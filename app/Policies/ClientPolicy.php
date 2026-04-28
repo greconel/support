@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Client;
+use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
+
+class ClientPolicy
+{
+    use HandlesAuthorization;
+
+    public function viewAny(User $user): bool
+    {
+        return $user->can('view clients');
+    }
+
+    public function view(User $user, Client $client): bool
+    {
+        return $user->can('view clients');
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->can('create clients');
+    }
+
+    public function update(User $user, Client $client): bool
+    {
+        return $user->can('edit clients');
+    }
+
+    public function archive(User $user, Client $client): bool
+    {
+        return $user->can('delete clients');
+    }
+
+    public function restore(User $user, Client $client): bool
+    {
+        return $user->can('delete clients');
+    }
+
+    public function delete(User $user, Client $client): bool
+    {
+        return $user->can('delete clients');
+    }
+
+    public function files(User $user, Client $client): bool
+    {
+        return $user->can('manage files for clients');
+    }
+}

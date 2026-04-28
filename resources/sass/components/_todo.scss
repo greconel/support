@@ -1,0 +1,30 @@
+.todo-checkbox {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: $white;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+
+    &:hover:not(:checked) {
+        background-color: $blue-100;
+        content: "";
+        background-image: url("/images/check-solid.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 60%;
+        opacity: 0.5;
+    }
+
+    &:checked {
+        background-color: $primary;
+        background-image: url("/images/check-solid-white.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 60%;
+    }
+}

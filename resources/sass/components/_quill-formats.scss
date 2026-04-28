@@ -1,0 +1,29 @@
+pre {
+    display: block;
+    color: #e5e7eb;
+    background-color: #1f2937;
+    overflow-x: auto;
+    font-size: 0.875em;
+    line-height: 1.75;
+    margin: 0 1.75rem;
+    padding: 0.85rem 1.15rem;
+    border-radius: 0.3rem;
+}
+
+blockquote {
+    font-weight: 500;
+    font-style: italic;
+    color: #0f172a;
+    border-left: 0.25rem solid #e2e8f0;
+    margin-top: 1.6em;
+    margin-bottom: 1.6em;
+    padding-left: 1em;
+
+    & p::before {
+        content: open-quote;
+    }
+
+    & p::after {
+        content: close-quote;
+    }
+}

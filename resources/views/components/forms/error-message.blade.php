@@ -1,0 +1,5 @@
+@error($for)
+    <div style="width:100%;margin-top:.25rem;font-size:.875em;color:#dc3545">
+        {{ $message }}
+    </div>
+@enderror

@@ -1,0 +1,7 @@
+.time-tracker-week {
+    & table {
+        & thead, tfoot {
+            background-color: $gray-200;
+        }
+    }
+}

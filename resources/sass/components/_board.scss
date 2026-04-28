@@ -1,0 +1,70 @@
+.board{
+    display: flex;
+    gap: 2rem;
+    overflow: auto;
+    height: 100%;
+    max-height: calc(100vh - 100px - 2.5rem);
+}
+
+.board-column {
+    flex: 0 0 400px;
+    background-color: $gray-200;
+    padding: 1rem;
+    border-radius: 5px;
+    height: fit-content;
+}
+
+.board-column-header {
+    margin-bottom: 1rem;
+    font-weight: bolder;
+    cursor: pointer;
+}
+
+.board-column-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 50px;
+}
+
+.board-column-footer {
+    margin-top: 1rem;
+}
+
+.board-column-add {
+    background-color: $gray-100;
+    padding: 0.5rem;
+    cursor: pointer;
+    height: fit-content;
+    flex: 0 0 400px;
+    border-radius: 5px;
+
+    &:hover {
+        background-color: $gray-200;
+    }
+
+    &.active {
+        background-color: $gray-200;
+    }
+}
+
+.board-column-item {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 5px;
+    -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+
+    &:hover {
+        background-color: $gray-100;
+    }
+}
+
+.board-column-item.draggable-source--is-dragging {
+    background-color: $gray-400;
+}
+
+.board-column-item.draggable-mirror {
+    z-index: 5;
+}

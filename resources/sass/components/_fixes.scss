@@ -1,0 +1,19 @@
+// fix safari button styles
+a[type='button'] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+body {
+    overflow-y: auto !important;
+    padding-right: 0 !important;
+}
+
+.ts-control {
+    min-height: auto !important;
+}
+
+.modal {
+    padding-right: 0 !important;
+}

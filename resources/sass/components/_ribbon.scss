@@ -1,0 +1,17 @@
+.ribbon-dev {
+    width: 140px;
+    padding: 10px;
+    position: absolute;
+    text-align: center;
+    color: #f0f0f0;
+    z-index: 100;
+    top: 14px;
+    left: -35px;
+    transform: rotate(-45deg);
+    background-color: $red-500;
+}
+
+.ribbon-sticky {
+    position: fixed;
+}
+

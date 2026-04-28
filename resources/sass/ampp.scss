@@ -1,0 +1,26 @@
+// Bootstrap
+@import "theme/variables";
+
+@import "~bootstrap/scss/functions";
+@import "~bootstrap/scss/variables";
+@import "~bootstrap/scss/mixins";
+
+@import "~bootstrap/scss/bootstrap";
+
+@import "theme/mixins";
+@import "theme/components";
+@import "theme/utilities";
+
+// extra
+@import "components/components";
+
+// 3rd party plugin styles
+@import "~select2/dist/css/select2.css";
+@import "~flatpickr/dist/flatpickr.min.css";
+@import "~flatpickr/dist/plugins/monthSelect/style.css";
+@import "~tom-select/dist/scss/tom-select.bootstrap5";
+@import "~filepond/dist/filepond.min.css";
+@import "~jquery-ui/themes/base/all.css";
+@import "~leaflet/dist/leaflet.css";
+@import "~simplebar/dist/simplebar.css";
+@import "~filepond-plugin-pdf-preview/dist/filepond-plugin-pdf-preview.min.css";

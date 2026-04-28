@@ -1,0 +1,51 @@
+$borderColor: rgba(135, 116, 87, .2);
+$subjectColor: rgba(135, 116, 87, .8);
+
+.timeline{
+    &:before{
+        @media screen and (min-width: 768px) {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -1px;
+            border-left: 1px solid $borderColor;
+        }
+
+    }
+
+    &-subject{
+        color: $subjectColor;
+        border-bottom: 1px solid $borderColor !important;
+        padding-bottom: .2rem;
+    }
+
+    &-break{
+        z-index: 0;
+        position: relative;
+
+        >span {
+            display: inline-block;
+            padding: .33em 0 .5em;
+            background: white;
+        }
+    }
+
+    &-text-color{
+        color: $subjectColor;
+    }
+
+    &-subject-color{
+        color: $subjectColor;
+
+        &:hover{
+            color: darken($subjectColor, 20%);
+        }
+    }
+
+    &-loading{
+        opacity: .5;
+    }
+}
+

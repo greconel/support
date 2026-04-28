@@ -1,0 +1,16 @@
+.auth-background {
+    &::before {
+        pointer-events: none;
+        content: '';
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        position: absolute;
+        background-image: url("/images/platform.png");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        opacity: 1;
+    }
+}
